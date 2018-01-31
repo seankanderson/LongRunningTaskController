@@ -1,7 +1,7 @@
 .NET Standard / Core 2.0 project to manage groups of long running tasks. Includes a concrete implementation for RabbitMq consumers and a web API to control the pool.
 
 
-'''
+```
 
 ILongRunningTaskController Controller = new LongRunningTaskController();
 
@@ -48,4 +48,4 @@ Controller.AddLongRunningTask(consumer);
 Controller.StartAll();
 					
 
-'''
+```
