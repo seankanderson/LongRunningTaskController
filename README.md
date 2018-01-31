@@ -1,4 +1,6 @@
-.NET Standard / Core 2.0 project to manage groups of long running tasks. Includes a concrete implementation for RabbitMq consumers and a web API to control the pool.
+.NET Standard / Core 2.0 project to manage groups of long running tasks. Includes a concrete implementation for RabbitMq consumers and a web API to control the pool.  
+
+This can be used or adapted to conduct load testing on a RabbitMQ broker or cluster.  
 
 
 ```
@@ -49,3 +51,12 @@ Controller.StartAll();
 Controller.StopAll();					
 
 ```
+
+The ConsumerDaemon project is a self-hosted web app demonstrating how you can remotely start, stop, and monitor consumers.
+
+http://localhost:56013/api/consumer/add/10/TestQueue01
+http://localhost:56013/api/consumer/start
+http://localhost:56013/api/consumer/running
+http://localhost:56013/api/consumer/logs
+http://localhost:56013/api/consumer/exceptions
+
