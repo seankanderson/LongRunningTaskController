@@ -54,9 +54,13 @@ Controller.StopAll();
 
 The ConsumerDaemon project is a self-hosted web app demonstrating how you can remotely start, stop, and monitor consumers.
 
-http://localhost:56013/api/consumer/add/10/TestQueue01
-http://localhost:56013/api/consumer/start
-http://localhost:56013/api/consumer/running
-http://localhost:56013/api/consumer/logs
-http://localhost:56013/api/consumer/exceptions
+`http://localhost:56013/api/consumer/add/10/TestQueue01`
+
+`http://localhost:56013/api/consumer/start`
+
+`http://localhost:56013/api/consumer/running`
+
+`http://localhost:56013/api/consumer/logs`
+
+`http://localhost:56013/api/consumer/exceptions`
 
