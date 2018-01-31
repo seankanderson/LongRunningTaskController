@@ -46,6 +46,6 @@ Controller.AddLongRunningTask(consumer);
 // AND ...
 
 Controller.StartAll();
-					
+Controller.StopAll();					
 
 ```
