@@ -1,0 +1,30 @@
+{
+  "Connection": {
+    "Host": "spider.rmq.cloudamqp.com",
+    "Port": 5672,
+    "VHost": "ptauycnb",
+    "User": "ptauycnb",
+    "Password": "o5L1BTXQkD5eucgUdJPNZYuZ_XQsdmdl"
+  },
+  "Certificate": null,
+  "Queue": {
+    "Name": "TestQueue01",
+    "Durable": true,
+    "Exclusive": false,
+    "AutoDelete": false,
+    "AutoAck": false,
+    "RoutingKey": "TestQueue01",
+    "Arguments": {}
+  },
+  "Exchange": {
+    "Name": "",
+    "Type": "",
+    "Durable": false,
+    "AutoDelete": false,
+    "Internal": false,
+    "Arguments": {}
+  },
+  "NumberOfTasks": 1,
+  "PublisherConfirmation": true,
+  "Role": "publisher"
+}

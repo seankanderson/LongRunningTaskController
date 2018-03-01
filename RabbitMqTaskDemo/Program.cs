@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using RabbitMQ.Client;
+using System;
+using System.IO;
 
 namespace RabbitMqTaskDemo
 {
@@ -7,79 +10,94 @@ namespace RabbitMqTaskDemo
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="args"></param>
+        /// <param name="args">First argument is the configuration file and the second argument is a payload file for the message body to publish.</param>
         static void Main(string[] args)
         {
-            //change to 1 task when debugging breakpoints
-            int numberOfTasksToAdd = 10;
-            string taskType = String.Empty;
+            var parameterFile = "parameters.json";
+            var payloadFile = "";
+            var payload = String.Empty;
 
-            if (args.Length > 0)
+            RabbitMqTaskDemoParameters parameters =
+                new RabbitMqTaskDemoParameters()
+                {
+                    Connection = new RabbitMqConnection(),
+                    Queue = new RabbitMqQueue(),
+                    Exchange = new RabbitMqExchange(),
+                    NumberOfTasks = 1,
+                    PublisherConfirmation = true,
+                    Role = "consumer"
+                };
+
+            if (args == null || args.Length == 0)
             {
-                taskType = args[0];
-                Int32.TryParse(args[1], out numberOfTasksToAdd);
+                try
+                {
+                    parameters = JsonConvert.DeserializeObject<RabbitMqTaskDemoParameters>(File.ReadAllText(parameterFile));
+                    payload = File.ReadAllText(payloadFile);
+                }
+                catch (Exception)
+                {
+                    File.WriteAllText(parameterFile, JsonConvert.SerializeObject(parameters, Formatting.Indented));
+                }
             }
+
+            if (args != null && args.Length > 0)
+            {
+                try
+                {
+                    parameters = JsonConvert.DeserializeObject<RabbitMqTaskDemoParameters>(File.ReadAllText(args[0]));
+                    Console.WriteLine("Config file: {0}", args[0]);
+                    payload = File.ReadAllText(args[1]);
+                    Console.WriteLine("Payload file: {0}", args[1]);
+                }
+                catch (Exception)
+                {
+                }
+            }
+
+            payload = payload == String.Empty ? JsonConvert.SerializeObject(parameters, Formatting.Indented) : payload;
+
+            Console.WriteLine("config: {0}", JsonConvert.SerializeObject(parameters, Formatting.Indented));
+            Console.WriteLine("payload: {0}", JsonConvert.SerializeObject(payload, Formatting.Indented));
+
+            //TODO: Add logic to suck in a text file for use as the message body
+            //TODO: Create channel configuration for publisher confirms
 
             ILongRunningTaskController Controller = new LongRunningTaskController();
 
-            var connection = new RabbitMqConnection();
-            connection.Host = "192.168.0.101";
-                        
-            var queue = new RabbitMqQueue();
-            queue.Name = "TestQueue01";
-            queue.AutoAck = false;
-
-            var queue2 = new RabbitMqQueue();
-            queue2.Name = "TestQueue02";
-            queue2.AutoAck = false;
-
-            var defaultExchange = new RabbitMqExchange();
-
-            var fanoutExchange = new RabbitMqExchange();
-            fanoutExchange.Type = "fanout";
-            fanoutExchange.Name = "amq.fanout";
-
-            queue.BindingExchange = fanoutExchange;
-            queue2.BindingExchange = fanoutExchange;
-
-            char ch = ' ';
-            if (taskType == String.Empty)
+            if (parameters.Role == "consumer")
             {
-                Console.WriteLine("Press P to publish or C to consume.");
-                 ch = Console.ReadKey().KeyChar;
-            }
-
-            if (ch == 'c' || ch == 'C' || taskType == "consume")
-            {                
-                Console.WriteLine("\nStarting {0} Consumers", numberOfTasksToAdd);
-                for (int i = 0; i < numberOfTasksToAdd; i++)
+                Console.WriteLine("\nStarting {0} Consumers", parameters.NumberOfTasks);
+                for (int i = 0; i < parameters.NumberOfTasks; i++)
                 {
                     var consumer = new BasicConsumerTask();
-                    consumer.Connection = connection;
-                    consumer.Queue = queue;
+                    consumer.Connection = parameters.Connection;
+                    consumer.Queue = parameters.Queue;
+                    consumer.Exchange = parameters.Exchange;
                     Controller.AddLongRunningTask(consumer);
                 }
 
             }
-            else if (ch == 'p' || ch == 'P' || taskType == "publish")
+            else if (parameters.Role == "publisher")
             {
-                Console.WriteLine("\nStarting {0} Publishers", numberOfTasksToAdd);
-                for (int i = 0; i < numberOfTasksToAdd; i++)
+                Console.WriteLine("\nStarting {0} Publishers", parameters.NumberOfTasks);
+                for (int i = 0; i < parameters.NumberOfTasks; i++)
                 {
                     var publisher = new BasicPublisherTask();
-                    publisher.Connection = connection;
-                    publisher.Queues.Add(queue);
-                    publisher.Queues.Add(queue2);
+                    publisher.Connection = parameters.Connection;
+                    publisher.Queue = parameters.Queue;
+                    publisher.Exchange = parameters.Exchange;
+                    publisher.Payload = payload;
                     publisher.ConfirmPublishedMessages = true;
                     Controller.AddLongRunningTask(publisher);
                 }
             }
-            
+
             Console.WriteLine("Press K to KILL all tasks.");
 
             Controller.StartAll();
 
-            ch = Console.ReadKey().KeyChar;
+            char ch = Console.ReadKey().KeyChar;
             if (ch == 'k' || ch == 'K')
             {
                 Controller.StopAll();

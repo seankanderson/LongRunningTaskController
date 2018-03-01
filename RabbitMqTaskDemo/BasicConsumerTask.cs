@@ -16,6 +16,7 @@ namespace RabbitMqTaskDemo
 
         public RabbitMqConnection Connection { private get; set; }
         public RabbitMqQueue Queue { private get; set; }
+        public RabbitMqExchange Exchange { private get; set; }
         private string _consumerId;
         private IModel _channel;
         private IConnection _connection;
@@ -50,37 +51,44 @@ namespace RabbitMqTaskDemo
                 CancellationTokenRegistration tokenRegistration =
                        _cancellationToken.Register(() => Stop());
 
-                var factory = new ConnectionFactory() { HostName = Connection.Host, Port = Connection.Port };
+                var factory = new ConnectionFactory()
+                {
+                    UserName = Connection.User,
+                    Password = Connection.Password,
+                    VirtualHost = Connection.VHost,
+                    HostName = Connection.Host,
+                    Port = Connection.Port
+                };
 
-                _connection = factory.CreateConnection();
+                var _connection = factory.CreateConnection();
 
                 _channel = _connection.CreateModel();
 
-                // Very wise to catch exceptions from this method and fire alerts to production support.
                 _channel.QueueDeclare(
-                    queue: Queue.Name,
-                    durable: Queue.Durable,
-                    exclusive: Queue.Exclusive,
-                    autoDelete: Queue.AutoDelete,
-                    arguments: Queue.Arguments);
+                       queue: Queue.Name,
+                       durable: Queue.Durable,
+                       exclusive: Queue.Exclusive,
+                       autoDelete: Queue.AutoDelete,
+                       arguments: Queue.Arguments);
 
-                if (Queue.BindingExchange.Name != RabbitMqExchange.DefaultExchange)
-                {
-                    if (!Queue.BindingExchange.Name.StartsWith("amq."))
-                    {
-                        _channel.ExchangeDeclare(
-                        exchange: Queue.BindingExchange.Name,
-                        type: Queue.BindingExchange.Type,
-                        durable: Queue.BindingExchange.Durable,
-                        autoDelete: Queue.BindingExchange.AutoDelete,
-                        arguments: Queue.BindingExchange.Arguments);
-                    }
+                // Very wise to catch exceptions from this method and fire alerts to production support.
+                                
+                if (Exchange.Name != RabbitMqExchange.DefaultExchange && !Exchange.Name.StartsWith("amq."))
+                {                   
+                    _channel.ExchangeDeclare(
+                        exchange: Exchange.Name,
+                        type: Exchange.Type,
+                        durable: Exchange.Durable,
+                        autoDelete: Exchange.AutoDelete,
+                        arguments: Exchange.Arguments);
+                                        
                     _channel.QueueBind(
-                        queue: Queue.Name,
-                        exchange: Queue.BindingExchange.Name,
-                        routingKey: Queue.RoutingKey,
-                        arguments: null);
+                            queue: Queue.Name,
+                            exchange: Exchange.Name,
+                            routingKey: Queue.RoutingKey,
+                            arguments: null);
                 }
+
                 _consumer = new EventingBasicConsumer(_channel);
                 _consumerId = _consumer.ConsumerTag = Guid.NewGuid().ToString();
                 _consumer.Received += ConsumerDelegate;
@@ -111,11 +119,11 @@ namespace RabbitMqTaskDemo
                     _connection.Close();
                     return;
                 }
-                
-                //Do work
-                var bodyObject = JsonConvert.SerializeObject(eventArgs.Body);
-                //Thread.Sleep(700);  
 
+                //Do work
+                var bodyObject = JsonConvert.SerializeObject(messageBody, Formatting.Indented);
+                //Thread.Sleep(254);  
+                Console.WriteLine(bodyObject);
                 if (Queue.AutoAck == false)
                 {
                     _channel.BasicAck(deliveryTag: eventArgs.DeliveryTag, multiple: false);
@@ -180,7 +188,7 @@ namespace RabbitMqTaskDemo
         private LongRunningTaskLogEntry CreateLogEntry()
         {
             var logEntry = new LongRunningTaskLogEntry();
-            logEntry.Details.Add("RabbitMqNode", Connection.Host + ":" + Connection.Port);
+            //logEntry.Details.Add("RabbitMqNode", Connection.Host + ":" + Connection.Port);
             logEntry.Details.Add("ConsumerId", _consumerId);
             logEntry.Details.Add("Queue", Queue.Name);
             return logEntry;

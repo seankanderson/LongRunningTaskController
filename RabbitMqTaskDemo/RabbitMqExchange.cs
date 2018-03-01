@@ -6,10 +6,10 @@ namespace RabbitMqTaskDemo
 {
     public class RabbitMqExchange
     {
-        public static string DefaultExchange = "";
+        public static string DefaultExchange = String.Empty;
 
-        public string Name { get; set; } = String.Empty;
-        public string Type { get; set; }
+        public string Name { get; set; } = DefaultExchange;
+        public string Type { get; set; } // Direct / Topic / Fanout / Header
         public bool Durable { get; set; }
         public bool AutoDelete { get; set; }
         public bool Internal { get; set; }

@@ -42,7 +42,7 @@ namespace ConsumerDaemon.Controllers
             for (int i = 0; i < numberOfConsumersToAdd; i++)
             {
                 var consumer = new BasicConsumerTask();
-                consumer.Connection = connection;
+                //consumer.Connection = connection;
                 consumer.Queue = queue;
                 Controller.AddLongRunningTask(consumer);
             }

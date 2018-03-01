@@ -16,7 +16,9 @@ namespace RabbitMqTaskDemo
         public bool IsRunning { get; private set; }
         public bool ConfirmPublishedMessages { get; set; }
         public RabbitMqConnection Connection { private get; set; }
-        public List<RabbitMqQueue> Queues { get; set; } = new List<RabbitMqQueue>();
+        public RabbitMqQueue Queue { get; set; }
+        public RabbitMqExchange Exchange { get; set; }
+        public string Payload { get; set; } = String.Empty;
         private CancellationToken _cancellationToken;
         private IConnection _connection;
         private IModel _channel;
@@ -43,39 +45,48 @@ namespace RabbitMqTaskDemo
             CancellationTokenRegistration tokenRegistration =
                         _cancellationToken.Register(() => Stop());
 
-            var factory = new ConnectionFactory() { HostName = Connection.Host, Port = Connection.Port };
+            var factory = new ConnectionFactory() {
+                UserName = Connection.User,
+                Password = Connection.Password,
+                VirtualHost =Connection.VHost,
+                HostName = Connection.Host,
+                Port = Connection.Port };
 
             _connection = factory.CreateConnection();
+
             _channel = _connection.CreateModel();
             if (ConfirmPublishedMessages) _channel.ConfirmSelect();
-
-            foreach (var queue in Queues)
+            if (Queue.Name != String.Empty)
             {
                 _channel.QueueDeclare(
-                        queue: queue.Name,
-                        durable: queue.Durable,
-                        exclusive: queue.Exclusive,
-                        autoDelete: queue.AutoDelete,
-                        arguments: queue.Arguments);
+                     queue: Queue.Name,
+                     durable: Queue.Durable,
+                     exclusive: Queue.Exclusive,
+                     autoDelete: Queue.AutoDelete,
+                     arguments: Queue.Arguments);
+            }
+            if (Exchange.Name != RabbitMqExchange.DefaultExchange && !Exchange.Name.StartsWith("amq."))
+            {
+                _channel.ExchangeDeclare(
+                    exchange: Exchange.Name,
+                    type: Exchange.Type,
+                    durable: Exchange.Durable,
+                    autoDelete: Exchange.AutoDelete,
+                    arguments: Exchange.Arguments);
 
-                if (queue.BindingExchange.Name != RabbitMqExchange.DefaultExchange)
+                _channel.BasicReturn += _channel_BasicReturn;
+
+                if (Queue.Name != String.Empty)
                 {
-                    if (!queue.BindingExchange.Name.StartsWith("amq."))
-                    {
-                        _channel.ExchangeDeclare(
-                            exchange: queue.BindingExchange.Name,
-                            type: queue.BindingExchange.Type,
-                            durable: queue.BindingExchange.Durable,
-                            autoDelete: queue.BindingExchange.AutoDelete,
-                            arguments: queue.BindingExchange.Arguments);
-                    }
                     _channel.QueueBind(
-                        queue: queue.Name,
-                        exchange: queue.BindingExchange.Name,
-                        routingKey: queue.RoutingKey,
-                        arguments: null);
+                            queue: Queue.Name,
+                            exchange: Exchange.Name,
+                            routingKey: Queue.RoutingKey,
+                            arguments: null);
                 }
             }
+
+
             IsRunning = true;
             while (1 == 1)
             {
@@ -89,6 +100,13 @@ namespace RabbitMqTaskDemo
                 }
             }
         }
+
+        private void _channel_BasicReturn(object sender, RabbitMQ.Client.Events.BasicReturnEventArgs e)
+        {
+            var messageBody = Encoding.UTF8.GetString(e.Body);
+            Console.WriteLine("MESSAGE NOT ROUTABLE : " + messageBody);
+        }
+
         private void Stop()
         {
             var logEntry = CreateLogEntry();
@@ -122,22 +140,28 @@ namespace RabbitMqTaskDemo
                 }
 
                 var watch = new Stopwatch();
-
-                foreach (var queue in Queues)
+                var messageBody = Guid.NewGuid().ToString();
+                if (Payload != String.Empty)
                 {
-                    var messageBody = Guid.NewGuid().ToString();
-                    var json = JsonConvert.SerializeObject(queue.Name +": "+ messageBody);
-                    var body = Encoding.UTF8.GetBytes(json);
-
-                    _channel.BasicPublish(exchange: queue.BindingExchange.Name,
-                                         routingKey: queue.RoutingKey,
-                                         basicProperties: null,
-                                         body: body);
-                    if (ConfirmPublishedMessages) _channel.WaitForConfirms();
-                    Debug.WriteLine("Ms: {0} PUBLISHED: " + json, watch.ElapsedMilliseconds);
+                    messageBody = Payload;
                 }
+
+                var json = JsonConvert.SerializeObject(Queue.Name + ": " + messageBody);
+                var body = Encoding.UTF8.GetBytes(json);
+
+                IBasicProperties props = _channel.CreateBasicProperties();
+                props.DeliveryMode = 2;
+
+                _channel.BasicPublish(exchange: Exchange.Name,
+                                     routingKey: Queue.RoutingKey,
+                                     basicProperties: props,
+                                     mandatory: true,
+                                     body: body);
+                if (ConfirmPublishedMessages) _channel.WaitForConfirms();
+
+
                 watch.Stop();
-                
+
             }
             catch (Exception e)
             {
@@ -159,7 +183,7 @@ namespace RabbitMqTaskDemo
         {
             var logEntry = new LongRunningTaskLogEntry();
             logEntry.Details.Add("RabbitMqNode", Connection.Host + ":" + Connection.Port);
-                        
+
             return logEntry;
         }
 

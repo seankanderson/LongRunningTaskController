@@ -7,7 +7,7 @@ namespace RabbitMqTaskDemo
     public class RabbitMqQueue
     {
 
-        public string Name { get; set; }
+        public string Name { get; set; } = String.Empty;
         public bool Durable { get; set; }
         public bool Exclusive { get; set; }
         public bool AutoDelete { get; set; }
@@ -17,15 +17,13 @@ namespace RabbitMqTaskDemo
         {
             get
             {
-                return _routingKey == String.Empty ? Name : _routingKey;
+                return (_routingKey == String.Empty) ? Name : _routingKey;
             }
             set
             {
                 _routingKey = value;
             }
         }
-
-        public RabbitMqExchange BindingExchange { get; set; } = new RabbitMqExchange();
 
         public Dictionary<string, object> Arguments { get; set; } = new Dictionary<string, object>();
     }
