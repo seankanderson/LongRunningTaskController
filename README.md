@@ -1,58 +1,20 @@
 .NET Standard / Core 2.0 project to manage groups of long running tasks. Includes a concrete implementation for RabbitMq consumers and a web API to control the pool.  
 
-This can be used or adapted to conduct load testing on a RabbitMQ broker or cluster.  
+This can be used to conduct load testing on a RabbitMQ broker cluster.  
 
 
 ```
+Run the RabbitMqTaskDemo console app to create a parameters.json file.  Alter the properties of the various objects to create a connection and publish/subscribe to messages on a RabbitMQ broker.  An alternate payload file can be used; with the default message payload being the object-serialized version of the data in parameters.json.
 
-ILongRunningTaskController Controller = new LongRunningTaskController();
+Custom parameters and payload files can be specified at the command line, making it easy to script out sophisticated message toplogies for testing.
 
-var connection = new RabbitMqConnection();
-connection.Host = "192.168.0.101";
-            
-var queue = new RabbitMqQueue();
-queue.Name = "TestQueue01";
-queue.AutoAck = false;
+dotnet RabbitMqTaskDemo.dll parameters.json messageBody.json
 
-var queue2 = new RabbitMqQueue();
-queue2.Name = "TestQueue02";
-queue2.AutoAck = false;
-
-var defaultExchange = new RabbitMqExchange();
-
-var fanoutExchange = new RabbitMqExchange();
-fanoutExchange.Type = "fanout";
-fanoutExchange.Name = "amq.fanout";
-
-queue.BindingExchange = fanoutExchange;
-queue2.BindingExchange = fanoutExchange;
-	
-//Publish 
-var publisher = new BasicPublisherTask();
-publisher.Connection = connection;
-publisher.Queues.Add(queue);
-publisher.Queues.Add(queue2);
-publisher.ConfirmPublishedMessages = true;
-Controller.AddLongRunningTask(publisher);
-
-// OR ...
-
-//Consume
-var consumer = new BasicConsumerTask();
-consumer.Connection = connection;
-consumer.Queue = queue;
-
-//Add as many consumer threads as needed based on workload
-Controller.AddLongRunningTask(consumer);
-
-// AND ...
-
-Controller.StartAll();
-Controller.StopAll();					
+Features decent logging.
 
 ```
 
-The ConsumerDaemon project is a self-hosted web app demonstrating how you can remotely start, stop, and monitor consumers.
+The ConsumerDaemon project is a self-hosted web app demonstrating how you can remotely start, stop, and monitor consumers via a REST API. Uses the RabbitMQTaskDemo project.
 
 `http://localhost:56013/api/consumer/add/10/TestQueue01`
 
