@@ -23,8 +23,7 @@ namespace RabbitMqTaskDemo
                     Connection = new RabbitMqConnection(),
                     Queue = new RabbitMqQueue(),
                     Exchange = new RabbitMqExchange(),
-                    NumberOfTasks = 1,
-                    PublisherConfirmation = true,
+                    NumberOfTasks = 1,                    
                     Role = "consumer"
                 };
 
@@ -88,7 +87,6 @@ namespace RabbitMqTaskDemo
                     publisher.Queue = parameters.Queue;
                     publisher.Exchange = parameters.Exchange;
                     publisher.Payload = payload;
-                    publisher.ConfirmPublishedMessages = true;
                     Controller.AddLongRunningTask(publisher);
                 }
             }

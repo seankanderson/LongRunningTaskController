@@ -4,6 +4,7 @@ using RabbitMQ.Client.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,6 @@ namespace RabbitMqTaskDemo
     {
         public LoggerWrapper Logger { get; set; }
         public bool IsRunning { get; private set; }
-        public bool ConfirmPublishedMessages { get; set; }
         public RabbitMqConnection Connection { private get; set; }
         public RabbitMqQueue Queue { get; set; }
         public RabbitMqExchange Exchange { get; set; }
@@ -22,6 +22,7 @@ namespace RabbitMqTaskDemo
         private CancellationToken _cancellationToken;
         private IConnection _connection;
         private IModel _channel;
+        private IBasicProperties _channelProperties;
 
         public Task Start(CancellationToken cancellationToken)
         {
@@ -45,17 +46,44 @@ namespace RabbitMqTaskDemo
             CancellationTokenRegistration tokenRegistration =
                         _cancellationToken.Register(() => Stop());
 
+            X509Store store = null;
+            try
+            {
+                store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+                store.Open(OpenFlags.ReadOnly);
+            }
+            catch (Exception e)
+            {
+                LogException("Problem opening Windows Cert Store.", e.StackTrace);
+            }
+
+            var Tls = new SslOption()
+            {
+                CertPath = Connection.CertPath,
+                Certs = Connection.CertPath.Equals("WindowsCertStore") ? store.Certificates : null,
+                CertPassphrase = Connection.CertPassphrase,
+                ServerName = Connection.CertServerName,
+                Enabled = Connection.TlsEnabled
+            };
+
             var factory = new ConnectionFactory() {
                 UserName = Connection.User,
                 Password = Connection.Password,
                 VirtualHost =Connection.VHost,
-                HostName = Connection.Host,
-                Port = Connection.Port };
-
+                HostName = Connection.HostName,
+                Ssl = Tls,
+                Port = Connection.Port
+            };
+            
             _connection = factory.CreateConnection();
 
             _channel = _connection.CreateModel();
-            if (ConfirmPublishedMessages) _channel.ConfirmSelect();
+                        
+            _channelProperties = _channel.CreateBasicProperties();
+            _channelProperties.DeliveryMode = Exchange.MessageDeliveryMode;
+
+            if (Connection.PublisherConfirmation) _channel.ConfirmSelect();
+
             if (Queue.Name != String.Empty)
             {
                 _channel.QueueDeclare(
@@ -146,22 +174,16 @@ namespace RabbitMqTaskDemo
                     messageBody = Payload;
                 }
 
-                var json = JsonConvert.SerializeObject(Queue.Name + ": " + messageBody);
+                var json = JsonConvert.SerializeObject(messageBody);
                 var body = Encoding.UTF8.GetBytes(json);
-
-                IBasicProperties props = _channel.CreateBasicProperties();
-                props.DeliveryMode = 2;
-
+                                
                 _channel.BasicPublish(exchange: Exchange.Name,
                                      routingKey: Queue.RoutingKey,
-                                     basicProperties: props,
+                                     basicProperties: _channelProperties,
                                      mandatory: true,
                                      body: body);
-                if (ConfirmPublishedMessages) _channel.WaitForConfirms();
-
-
+                if (Connection.PublisherConfirmation) _channel.WaitForConfirms();
                 watch.Stop();
-
             }
             catch (Exception e)
             {
@@ -182,7 +204,7 @@ namespace RabbitMqTaskDemo
         private LongRunningTaskLogEntry CreateLogEntry()
         {
             var logEntry = new LongRunningTaskLogEntry();
-            logEntry.Details.Add("RabbitMqNode", Connection.Host + ":" + Connection.Port);
+            logEntry.Details.Add("RabbitMqNode", Connection.HostName + ":" + Connection.Port);
 
             return logEntry;
         }

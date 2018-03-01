@@ -1,12 +1,16 @@
 {
   "Connection": {
-    "Host": "spider.rmq.cloudamqp.com",
+    "HostName": "spider.rmq.cloudamqp.com",
     "Port": 5672,
     "VHost": "ptauycnb",
     "User": "ptauycnb",
-    "Password": "o5L1BTXQkD5eucgUdJPNZYuZ_XQsdmdl"
+    "Password": "o5L1BTXQkD5eucgUdJPNZYuZ_XQsdmdl",
+    "PublisherConfirmation": true,
+    "CertPath": "WindowsCertStore",
+    "CertPassphrase": null,
+    "CertServerName": null,
+    "TlsEnabled": false
   },
-  "Certificate": null,
   "Queue": {
     "Name": "TestQueue01",
     "Durable": true,
@@ -18,13 +22,13 @@
   },
   "Exchange": {
     "Name": "",
-    "Type": "",
+    "Type": null,
     "Durable": false,
+    "MessageDeliveryMode": 2,
     "AutoDelete": false,
     "Internal": false,
     "Arguments": {}
   },
   "NumberOfTasks": 1,
-  "PublisherConfirmation": true,
   "Role": "publisher"
 }

@@ -3,6 +3,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,13 +51,33 @@ namespace RabbitMqTaskDemo
             {
                 CancellationTokenRegistration tokenRegistration =
                        _cancellationToken.Register(() => Stop());
+                X509Store store=null;
+                try
+                {
+                    store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+                    store.Open(OpenFlags.ReadOnly);
+                }
+                catch (Exception e)
+                {
+                    LogException("Problem opening Windows Cert Store.", e.StackTrace);
+                }
+
+                var Tls = new SslOption()
+                {
+                    CertPath = Connection.CertPath,
+                    Certs = Connection.CertPath.Equals("WindowsCertStore") ? store.Certificates : null,
+                    CertPassphrase = Connection.CertPassphrase,
+                    ServerName = Connection.CertServerName,
+                    Enabled = Connection.TlsEnabled
+                };
 
                 var factory = new ConnectionFactory()
                 {
                     UserName = Connection.User,
                     Password = Connection.Password,
                     VirtualHost = Connection.VHost,
-                    HostName = Connection.Host,
+                    HostName = Connection.HostName,
+                    Ssl = Tls,
                     Port = Connection.Port
                 };
 
@@ -99,7 +120,7 @@ namespace RabbitMqTaskDemo
             }
             catch (Exception e)
             {
-                LogException("Problem creating connection/channel/queue.", e);
+                LogException("Problem creating connection/channel/queue.", e.StackTrace);
                 Stop();
             }
         }
@@ -134,7 +155,7 @@ namespace RabbitMqTaskDemo
             catch (Exception e)
             {
 
-                LogException("Problem acknowledging message.", e);
+                LogException("Problem acknowledging message.", e.StackTrace);
                 Stop();
 
                 //channel.BasicReject(ea.DeliveryTag, false);  //server discards the message
@@ -163,7 +184,7 @@ namespace RabbitMqTaskDemo
             }
             catch (Exception e)
             {
-                LogException("Problem closing channel on kill", e);
+                LogException("Problem closing channel on kill", e.StackTrace);
             }
         }
 
@@ -176,12 +197,12 @@ namespace RabbitMqTaskDemo
             Logger.Log(logEntry);
         }
 
-        private void LogException(string comment, Exception e)
+        private void LogException(string comment, string stackTrace)
         {
             var exceptionLog = CreateLogEntry();
             exceptionLog.IsException = true;
             exceptionLog.Details.Add("Comment", comment);
-            exceptionLog.Details.Add("StackTrace", e.StackTrace);
+            exceptionLog.Details.Add("StackTrace", stackTrace);
             Logger.Log(exceptionLog);
         }
 
