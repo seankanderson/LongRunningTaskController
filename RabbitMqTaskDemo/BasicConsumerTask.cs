@@ -27,7 +27,7 @@ namespace RabbitMqTaskDemo
         // The default is unlimited.  More messages == more time to validate unacknowledged messages on the broker when a client shuts down.
         // 100 - 300 is recommended based on the workload (workload refers to the time needed to process one message)
         // If it takes one second or more to process a message there is no need for a deep prefetch
-        private readonly ushort numberOfLocallyCachedMessages = 100;
+        
         public bool IsRunning { get; private set; }
 
         public Task Start(CancellationToken cancellationToken)
@@ -114,7 +114,7 @@ namespace RabbitMqTaskDemo
                 _consumerId = _consumer.ConsumerTag = Guid.NewGuid().ToString();
                 _consumer.Received += ConsumerDelegate;
 
-                _channel.BasicQos(0, numberOfLocallyCachedMessages, true);
+                _channel.BasicQos(0, Connection.Prefetch, true);
                 _consumerId = _channel.BasicConsume(queue: Queue.Name, autoAck: Queue.AutoAck, consumer: _consumer);  //start the consumer
                 IsRunning = true;
             }

@@ -13,7 +13,7 @@ namespace RabbitMqTaskDemo
         public string Password { get; set; } = String.Empty;
 
         public bool PublisherConfirmation { get; set; }
-
+        public ushort Prefetch { get; set; } = 100;
         public string CertPath { get; set; } = "WindowsCertStore";
         public string CertPassphrase { get; set; } = String.Empty;
         public string CertServerName { get; set; } = String.Empty;

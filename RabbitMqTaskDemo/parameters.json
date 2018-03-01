@@ -6,6 +6,7 @@
     "User": "ptauycnb",
     "Password": "o5L1BTXQkD5eucgUdJPNZYuZ_XQsdmdl",
     "PublisherConfirmation": true,
+    "Prefetch": 100,
     "CertPath": "WindowsCertStore",
     "CertPassphrase": null,
     "CertServerName": null,
@@ -30,5 +31,5 @@
     "Arguments": {}
   },
   "NumberOfTasks": 1,
-  "Role": "publisher"
+  "Role": "consumer"
 }
