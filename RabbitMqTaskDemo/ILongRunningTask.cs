@@ -9,6 +9,7 @@ namespace RabbitMqTaskDemo
         LoggerWrapper Logger { get; set; }
         Task Start(CancellationToken cancellationToken);
         bool IsRunning { get; }
+        int ExecutionCount { get; set; }
        
     }
 }

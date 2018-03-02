@@ -4,7 +4,7 @@
     "Port": 5672,
     "VHost": "ptauycnb",
     "User": "ptauycnb",
-    "Password": "o5L1BTXQkD5eucgUdJPNZYuZ_XQsdmdl",
+    "Password": "4se5SWZYp_KtUo-qhbH7bJRvA6RcIgb4",
     "PublisherConfirmation": true,
     "Prefetch": 100,
     "CertPath": "WindowsCertStore",
@@ -13,23 +13,23 @@
     "TlsEnabled": false
   },
   "Queue": {
-    "Name": "TestQueue01",
+    "Name": "",
     "Durable": true,
     "Exclusive": false,
     "AutoDelete": false,
     "AutoAck": false,
-    "RoutingKey": "TestQueue01",
+    "RoutingKey": "user.delete",
     "Arguments": {}
   },
   "Exchange": {
-    "Name": "",
-    "Type": null,
-    "Durable": false,
+    "Name": "TopicExchangeTest01",
+    "Type": "topic",
+    "Durable": true,
     "MessageDeliveryMode": 2,
     "AutoDelete": false,
     "Internal": false,
     "Arguments": {}
   },
   "NumberOfTasks": 1,
-  "Role": "consumer"
+  "Role": "publisher"
 }

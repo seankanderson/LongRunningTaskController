@@ -17,11 +17,20 @@ namespace RabbitMqTaskDemo
         public LoggerWrapper Logger { get; set; } = new LoggerWrapper("RabbitMqConsumer");  
         
         private CancellationTokenSource _tokenSource = new CancellationTokenSource();
-      
+        private int _executionCount=0;
         public void AddLongRunningTask(ILongRunningTask task)
         {
             task.Logger = Logger;
             LongRunningTasks.Add(task);           
+        }
+
+        public int GetExecutionCount()
+        {
+            foreach (var consumer in LongRunningTasks)
+            {
+                _executionCount = _executionCount + consumer.ExecutionCount;
+            }
+            return _executionCount;
         }
 
         public void StartAll()
@@ -45,6 +54,8 @@ namespace RabbitMqTaskDemo
         {
            
             _tokenSource.Cancel();
+            Thread.Sleep(5000);
+            GetExecutionCount();
             LongRunningTasks = new ConcurrentBag<ILongRunningTask>();
             _tokenSource.Dispose();
             _tokenSource = new CancellationTokenSource();

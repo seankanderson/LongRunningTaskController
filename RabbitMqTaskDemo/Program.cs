@@ -102,8 +102,9 @@ namespace RabbitMqTaskDemo
                 Console.WriteLine("\nTask cancellation requested.");
 
             }
-
+            Console.WriteLine("Messages Processed: {0}", Controller.GetExecutionCount());
             Console.WriteLine("\nMAIN THREAD FINISHED");
+            ch = Console.ReadKey().KeyChar;
         }
 
 

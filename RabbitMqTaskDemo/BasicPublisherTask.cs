@@ -18,12 +18,13 @@ namespace RabbitMqTaskDemo
         public RabbitMqConnection Connection { private get; set; }
         public RabbitMqQueue Queue { get; set; }
         public RabbitMqExchange Exchange { get; set; }
+        public int ExecutionCount { get { return _messageCount; } set { lock (this) { _messageCount = _messageCount + value; } } }
         public string Payload { get; set; } = String.Empty;
         private CancellationToken _cancellationToken;
         private IConnection _connection;
         private IModel _channel;
         private IBasicProperties _channelProperties;
-
+        private int _messageCount = 0;
         public Task Start(CancellationToken cancellationToken)
         {
             _cancellationToken = cancellationToken;
@@ -121,6 +122,7 @@ namespace RabbitMqTaskDemo
                 try
                 {
                     Publish();
+
                 }
                 catch (AlreadyClosedException)
                 {
@@ -131,8 +133,8 @@ namespace RabbitMqTaskDemo
 
         private void _channel_BasicReturn(object sender, RabbitMQ.Client.Events.BasicReturnEventArgs e)
         {
-            var messageBody = Encoding.UTF8.GetString(e.Body);
-            Console.WriteLine("MESSAGE NOT ROUTABLE : " + messageBody);
+            ExecutionCount = -1;
+            Console.WriteLine("MESSAGE NOT ROUTABLE: No Queue bound to exchange." );
         }
 
         private void Stop()
@@ -184,6 +186,7 @@ namespace RabbitMqTaskDemo
                                      body: body);
                 if (Connection.PublisherConfirmation) _channel.WaitForConfirms();
                 watch.Stop();
+                ExecutionCount = 1;
             }
             catch (Exception e)
             {

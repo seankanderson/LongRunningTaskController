@@ -10,6 +10,7 @@ namespace RabbitMqTaskDemo
         ConcurrentBag<ILongRunningTask> LongRunningTasks { get; set; }
         LoggerWrapper Logger { get; set; }
         void AddLongRunningTask(ILongRunningTask task);
+        int GetExecutionCount();
         void StartAll();
         void StopAll();
 

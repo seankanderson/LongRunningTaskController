@@ -19,16 +19,15 @@ namespace RabbitMqTaskDemo
         public RabbitMqQueue Queue { private get; set; }
         public RabbitMqExchange Exchange { private get; set; }
         private string _consumerId;
-        private IModel _channel;
         private IConnection _connection;
+        private IModel _channel;
         private CancellationToken _cancellationToken;
-
         EventingBasicConsumer _consumer;
-        // The default is unlimited.  More messages == more time to validate unacknowledged messages on the broker when a client shuts down.
-        // 100 - 300 is recommended based on the workload (workload refers to the time needed to process one message)
-        // If it takes one second or more to process a message there is no need for a deep prefetch
-        
+
         public bool IsRunning { get; private set; }
+
+        private int _messageCount;
+        public int ExecutionCount { get { return _messageCount; } set { lock (this) { _messageCount++; } } }
 
         public Task Start(CancellationToken cancellationToken)
         {
@@ -51,7 +50,7 @@ namespace RabbitMqTaskDemo
             {
                 CancellationTokenRegistration tokenRegistration =
                        _cancellationToken.Register(() => Stop());
-                X509Store store=null;
+                X509Store store = null;
                 try
                 {
                     store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
@@ -81,7 +80,7 @@ namespace RabbitMqTaskDemo
                     Port = Connection.Port
                 };
 
-                var _connection = factory.CreateConnection();
+                _connection = factory.CreateConnection();
 
                 _channel = _connection.CreateModel();
 
@@ -91,18 +90,16 @@ namespace RabbitMqTaskDemo
                        exclusive: Queue.Exclusive,
                        autoDelete: Queue.AutoDelete,
                        arguments: Queue.Arguments);
-
-                // Very wise to catch exceptions from this method and fire alerts to production support.
-                                
+                
                 if (Exchange.Name != RabbitMqExchange.DefaultExchange && !Exchange.Name.StartsWith("amq."))
-                {                   
+                {
                     _channel.ExchangeDeclare(
                         exchange: Exchange.Name,
                         type: Exchange.Type,
                         durable: Exchange.Durable,
                         autoDelete: Exchange.AutoDelete,
                         arguments: Exchange.Arguments);
-                                        
+
                     _channel.QueueBind(
                             queue: Queue.Name,
                             exchange: Exchange.Name,
@@ -143,11 +140,12 @@ namespace RabbitMqTaskDemo
 
                 //Do work
                 var bodyObject = JsonConvert.SerializeObject(messageBody, Formatting.Indented);
-                //Thread.Sleep(254);  
+                 
                 Console.WriteLine(bodyObject);
                 if (Queue.AutoAck == false)
                 {
                     _channel.BasicAck(deliveryTag: eventArgs.DeliveryTag, multiple: false);
+                    ExecutionCount = 0;
                 }
                 LogMessageSuccess(stopwatch.ElapsedMilliseconds, messageBody);
 
